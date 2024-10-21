@@ -3,21 +3,21 @@
 // The data was modelled by hand, and then created with Claude/GPT
 
 // Define the structure for a single track with a mute option
-interface Track {
+export interface Track {
   audioId: string; // Will correspond to an MP3 URL
   pattern: boolean[]; // 32 booleans representing eighth notes
   muted: boolean; // Indicates if the track is muted
 }
 
 // Define the main DrumLoop interface
-interface DrumLoop {
+export interface DrumLoop {
   tracks: Track[];
   isPlaying: boolean;
   currentPlayIndex: number;
 }
 
 // Create a function to initialize a new DrumLoop
-function createDrumLoop(): DrumLoop {
+export function createDrumLoop(): DrumLoop {
   return {
     tracks: [
       { audioId: "", pattern: new Array(32).fill(false), muted: false },
@@ -31,7 +31,7 @@ function createDrumLoop(): DrumLoop {
 }
 
 // Function to toggle a specific note on a specific track
-function toggleNote(
+export function toggleNote(
   drumLoop: DrumLoop,
   trackIndex: number,
   noteIndex: number
@@ -102,7 +102,7 @@ console.log(myDrumLoop.tracks[0].pattern); // Check the updated pattern
 let playInterval: number | null = null;
 
 // Function to play the DrumLoop
-function playDrumLoop(drumLoop: DrumLoop, bpm: number = 120): void {
+export function playDrumLoop(drumLoop: DrumLoop, bpm: number = 120): void {
   if (drumLoop.isPlaying) return; // Prevent multiple intervals
 
   drumLoop.isPlaying = true;
@@ -131,7 +131,7 @@ function playDrumLoop(drumLoop: DrumLoop, bpm: number = 120): void {
 }
 
 // Function to stop the DrumLoop
-function stopDrumLoop(drumLoop: DrumLoop): void {
+export function stopDrumLoop(drumLoop: DrumLoop): void {
   if (playInterval !== null) {
     clearInterval(playInterval);
     playInterval = null;
