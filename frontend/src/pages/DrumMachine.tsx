@@ -94,8 +94,10 @@ const DrumMachine: React.FC = () => {
         const context = new AudioContext();
         setAudioContext(context);
 
-        const sampleNames = ["Kick", "Snare", "Clap", "Hat"];
-        const sampleFiles = {
+        const sampleNames = ["Kick", "Snare", "Clap", "Hat"] as const;
+        type SampleName = typeof sampleNames[number];
+
+        const sampleFiles: Record<SampleName, string> = {
             Kick,
             Snare,
             Clap,
