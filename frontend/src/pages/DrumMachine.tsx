@@ -12,6 +12,8 @@ const styles = {
     },
     trackContainer: {
         display: "flex",
+        alignItems: "center",
+        marginBottom: "5px",
     },
     trackHeader: {
         display: "flex",
@@ -103,10 +105,14 @@ const DrumMachine: React.FC = () => {
         const loadSamples = async () => {
             const buffers: { [key: string]: AudioBuffer } = {};
             for (const name of sampleNames) {
-                const response = await fetch(sampleFiles[name]);
-                const arrayBuffer = await response.arrayBuffer();
-                const audioBuffer = await context.decodeAudioData(arrayBuffer);
-                buffers[name] = audioBuffer;
+                try {
+                    const response = await fetch(sampleFiles[name]);
+                    const arrayBuffer = await response.arrayBuffer();
+                    const audioBuffer = await context.decodeAudioData(arrayBuffer);
+                    buffers[name] = audioBuffer;
+                } catch (error) {
+                    console.error(`Error loading sample ${name}:`, error);
+                }
             }
             setBuffers(buffers);
         };
@@ -119,22 +125,36 @@ const DrumMachine: React.FC = () => {
         };
     }, []);
 
+    // Deep copy utility function
+    const deepCopyDrumLoop = (loop: DrumLoop): DrumLoop => {
+        return {
+            bpm: loop.bpm,
+            tracks: loop.tracks.map(track => ({
+                name: track.name,
+                pattern: [...track.pattern],
+                muted: track.muted,
+            })),
+        };
+    };
+
     const handleToggleNote = (trackIndex: number, noteIndex: number) => {
-        const updatedLoop = { ...drumLoop };
-        const track = updatedLoop.tracks[trackIndex];
-        track.pattern[noteIndex] = !track.pattern[noteIndex];
-        setDrumLoop(updatedLoop);
+        setDrumLoop(prevLoop => {
+            const updatedLoop = deepCopyDrumLoop(prevLoop);
+            updatedLoop.tracks[trackIndex].pattern[noteIndex] = !updatedLoop.tracks[trackIndex].pattern[noteIndex];
+            return updatedLoop;
+        });
     };
 
     const handleToggleMute = (trackIndex: number) => {
-        const updatedLoop = { ...drumLoop };
-        const track = updatedLoop.tracks[trackIndex];
-        track.muted = !track.muted;
-        setDrumLoop(updatedLoop);
+        setDrumLoop(prevLoop => {
+            const updatedLoop = deepCopyDrumLoop(prevLoop);
+            updatedLoop.tracks[trackIndex].muted = !updatedLoop.tracks[trackIndex].muted;
+            return updatedLoop;
+        });
     };
 
     const handlePlay = () => {
-        if (!audioContext || !buffers || isPlayingRef.current) return;
+        if (!audioContext || Object.keys(buffers).length === 0 || isPlayingRef.current) return;
 
         setIsPlaying(true);
         isPlayingRef.current = true;
@@ -145,17 +165,9 @@ const DrumMachine: React.FC = () => {
         noteIndexRef.current = 0;
         nextNoteTimeRef.current = audioContext.currentTime;
 
-        const scheduleAheadTime = 60; // seconds
+        const scheduleAheadTime = 0.5; // seconds
 
         const scheduler = () => {
-            // Catch up if we're behind
-            while (
-                nextNoteTimeRef.current < audioContext.currentTime
-            ) {
-                nextNoteTimeRef.current += sixteenthNoteDuration;
-                noteIndexRef.current++;
-            }
-
             while (
                 nextNoteTimeRef.current <
                 audioContext.currentTime + scheduleAheadTime
@@ -167,19 +179,21 @@ const DrumMachine: React.FC = () => {
                         !track.muted
                     ) {
                         const buffer = buffers[track.name];
-                        const source = audioContext.createBufferSource();
-                        source.buffer = buffer;
-                        source.connect(audioContext.destination);
-                        source.start(nextNoteTimeRef.current);
-                        // Keep track of the scheduled nodes
-                        scheduledNodesRef.current.push(source);
+                        if (buffer) {
+                            const source = audioContext.createBufferSource();
+                            source.buffer = buffer;
+                            source.connect(audioContext.destination);
+                            source.start(nextNoteTimeRef.current);
+                            // Keep track of the scheduled nodes
+                            scheduledNodesRef.current.push(source);
+                        }
                     }
                 });
                 nextNoteTimeRef.current += sixteenthNoteDuration;
                 noteIndexRef.current++;
             }
             if (isPlayingRef.current) {
-                setTimeout(scheduler, 100); // Use setTimeout instead of requestAnimationFrame
+                setTimeout(scheduler, 25); // Reduced interval for better responsiveness
             }
         };
 
