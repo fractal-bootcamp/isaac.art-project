@@ -1,14 +1,4 @@
-import React, { useState, useEffect } from "react";
-import {
-    DrumLoop,
-    Track,
-    createDrumLoop,
-    toggleNote,
-    playDrumLoop,
-    stopDrumLoop,
-} from "../DrumLoopLogic";
-
-// Importing the sample WAV files
+import React, { useState, useEffect, useRef } from "react";
 import Clap from "../samples/Clap.wav";
 import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
@@ -21,13 +11,17 @@ const styles = {
         fontFamily: "Arial, sans-serif",
     },
     trackContainer: {
-        marginBottom: "20px",
+        display: "flex",
     },
     trackHeader: {
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
         marginBottom: "10px",
+    },
+    trackText: {
+        width: 100,
+        justifyContent: "center",
+        display: "flex",
     },
     notesGrid: {
         display: "grid",
@@ -59,28 +53,79 @@ const styles = {
     },
 };
 
-const DrumMachine: React.FC = () => {
-    const [drumLoop, setDrumLoop] = useState<DrumLoop>(createDrumLoop());
+interface Track {
+    name: string;
+    pattern: boolean[]; // length 32
+    muted: boolean;
+}
 
-    // Initialize audioId with sample WAV files on component mount
+interface DrumLoop {
+    tracks: Track[];
+    bpm: number;
+}
+
+const DrumMachine: React.FC = () => {
+    const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+    const [buffers, setBuffers] = useState<{ [key: string]: AudioBuffer }>({});
+    const [drumLoop, setDrumLoop] = useState<DrumLoop>({
+        bpm: 128,
+        tracks: [
+            { name: "Kick", pattern: new Array(32).fill(false), muted: false },
+            { name: "Snare", pattern: new Array(32).fill(false), muted: false },
+            { name: "Clap", pattern: new Array(32).fill(false), muted: false },
+            { name: "Hat", pattern: new Array(32).fill(false), muted: false },
+        ],
+    });
+    const [isPlaying, setIsPlaying] = useState<boolean>(false);
+
+    const isPlayingRef = useRef<boolean>(false);
+    const scheduledNodesRef = useRef<AudioBufferSourceNode[]>([]);
+    const noteIndexRef = useRef<number>(0);
+    const nextNoteTimeRef = useRef<number>(0);
+    const drumLoopRef = useRef<DrumLoop>(drumLoop);
+
     useEffect(() => {
-        const initializedLoop = { ...drumLoop };
-        initializedLoop.tracks[0].audioId = Kick;
-        initializedLoop.tracks[1].audioId = Snare;
-        initializedLoop.tracks[2].audioId = Clap;
-        initializedLoop.tracks[3].audioId = Hat;
-        setDrumLoop(initializedLoop);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        drumLoopRef.current = drumLoop;
+    }, [drumLoop]);
+
+    useEffect(() => {
+        const context = new AudioContext();
+        setAudioContext(context);
+
+        const sampleNames = ["Kick", "Snare", "Clap", "Hat"];
+        const sampleFiles = {
+            Kick,
+            Snare,
+            Clap,
+            Hat,
+        };
+
+        const loadSamples = async () => {
+            const buffers: { [key: string]: AudioBuffer } = {};
+            for (const name of sampleNames) {
+                const response = await fetch(sampleFiles[name]);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await context.decodeAudioData(arrayBuffer);
+                buffers[name] = audioBuffer;
+            }
+            setBuffers(buffers);
+        };
+
+        loadSamples();
+
+        // Cleanup function to close the AudioContext when component unmounts
+        return () => {
+            context.close();
+        };
     }, []);
 
-    // Handler to toggle a note
     const handleToggleNote = (trackIndex: number, noteIndex: number) => {
         const updatedLoop = { ...drumLoop };
-        toggleNote(updatedLoop, trackIndex, noteIndex);
+        const track = updatedLoop.tracks[trackIndex];
+        track.pattern[noteIndex] = !track.pattern[noteIndex];
         setDrumLoop(updatedLoop);
     };
 
-    // Handler to toggle mute
     const handleToggleMute = (trackIndex: number) => {
         const updatedLoop = { ...drumLoop };
         const track = updatedLoop.tracks[trackIndex];
@@ -88,16 +133,69 @@ const DrumMachine: React.FC = () => {
         setDrumLoop(updatedLoop);
     };
 
-    // Handler to play the loop
     const handlePlay = () => {
-        playDrumLoop(drumLoop, 128); // You can adjust BPM as needed
-        setDrumLoop({ ...drumLoop, isPlaying: true });
+        if (!audioContext || !buffers || isPlayingRef.current) return;
+
+        setIsPlaying(true);
+        isPlayingRef.current = true;
+        scheduledNodesRef.current = [];
+
+        const sixteenthNoteDuration = 60 / drumLoop.bpm / 4;
+
+        noteIndexRef.current = 0;
+        nextNoteTimeRef.current = audioContext.currentTime;
+
+        const scheduleAheadTime = 60; // seconds
+
+        const scheduler = () => {
+            // Catch up if we're behind
+            while (
+                nextNoteTimeRef.current < audioContext.currentTime
+            ) {
+                nextNoteTimeRef.current += sixteenthNoteDuration;
+                noteIndexRef.current++;
+            }
+
+            while (
+                nextNoteTimeRef.current <
+                audioContext.currentTime + scheduleAheadTime
+            ) {
+                // Schedule the notes
+                drumLoopRef.current.tracks.forEach((track) => {
+                    if (
+                        track.pattern[noteIndexRef.current % 32] &&
+                        !track.muted
+                    ) {
+                        const buffer = buffers[track.name];
+                        const source = audioContext.createBufferSource();
+                        source.buffer = buffer;
+                        source.connect(audioContext.destination);
+                        source.start(nextNoteTimeRef.current);
+                        // Keep track of the scheduled nodes
+                        scheduledNodesRef.current.push(source);
+                    }
+                });
+                nextNoteTimeRef.current += sixteenthNoteDuration;
+                noteIndexRef.current++;
+            }
+            if (isPlayingRef.current) {
+                setTimeout(scheduler, 100); // Use setTimeout instead of requestAnimationFrame
+            }
+        };
+
+        scheduler();
     };
 
-    // Handler to stop the loop
     const handleStop = () => {
-        stopDrumLoop(drumLoop);
-        setDrumLoop({ ...drumLoop, isPlaying: false });
+        if (!audioContext || !isPlayingRef.current) return;
+
+        setIsPlaying(false);
+        isPlayingRef.current = false;
+
+        scheduledNodesRef.current.forEach((node) => {
+            node.stop();
+        });
+        scheduledNodesRef.current = [];
     };
 
     // Function to get the background color based on the note index and state
@@ -115,44 +213,47 @@ const DrumMachine: React.FC = () => {
             <h1>Drum Machine</h1>
             {drumLoop.tracks.map((track: Track, trackIndex: number) => (
                 <div key={trackIndex} style={styles.trackContainer}>
-                    <div style={styles.trackHeader}>
-                        <span>
-                            {track.audioId.includes("Kick") && "Kick"}
-                            {track.audioId.includes("Snare") && "Snare"}
-                            {track.audioId.includes("Clap") && "Clap"}
-                            {track.audioId.includes("Hat") && "Hat"}
-                        </span>
-                        <button
-                            onClick={() => handleToggleMute(trackIndex)}
-                            style={{
-                                padding: "5px 10px",
-                                cursor: "pointer",
-                                backgroundColor: track.muted ? "#f44336" : "#4caf50",
-                                color: "#fff",
-                                border: "none",
-                                borderRadius: "4px",
-                            }}
-                        >
-                            {track.muted ? "Unmute" : "Mute"}
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => handleToggleMute(trackIndex)}
+                        style={{
+                            padding: "5px 10px",
+                            cursor: "pointer",
+                            backgroundColor: track.muted
+                                ? "#f44336"
+                                : "#4caf50",
+                            color: "#fff",
+                            width: 100,
+                            border: "none",
+                            borderRadius: "4px",
+                        }}
+                    >
+                        {track.muted ? "Unmute" : "Mute"}
+                    </button>
+                    <span style={styles.trackText}>{track.name}</span>
                     <div style={styles.notesGrid}>
-                        {track.pattern.map((note: boolean, noteIndex: number) => (
-                            <button
-                                key={noteIndex}
-                                onClick={() => handleToggleNote(trackIndex, noteIndex)}
-                                style={{
-                                    ...styles.noteButton,
-                                    backgroundColor: getNoteColor(noteIndex, note),
-                                }}
-                            ></button>
-                        ))}
+                        {track.pattern.map(
+                            (note: boolean, noteIndex: number) => (
+                                <button
+                                    key={noteIndex}
+                                    onClick={() =>
+                                        handleToggleNote(trackIndex, noteIndex)
+                                    }
+                                    style={{
+                                        ...styles.noteButton,
+                                        backgroundColor: getNoteColor(
+                                            noteIndex,
+                                            note
+                                        ),
+                                    }}
+                                ></button>
+                            )
+                        )}
                     </div>
                 </div>
             ))}
 
             <div style={styles.controls}>
-                {!drumLoop.isPlaying ? (
+                {!isPlaying ? (
                     <button onClick={handlePlay} style={styles.controlButton}>
                         Play
                     </button>
