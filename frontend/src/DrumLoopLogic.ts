@@ -16,6 +16,7 @@ export interface DrumLoop {
   bpm: number;
   isPlaying: boolean;
   currentPlayIndex: number;
+  id?: string;
 }
 
 // Create a function to initialize a new DrumLoop
