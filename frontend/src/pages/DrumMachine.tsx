@@ -6,7 +6,6 @@ import Snare from "../samples/Snare.wav";
 import { Track, DrumLoop } from "../DrumLoopLogic";
 import { Howl } from "howler";
 
-
 // Optional: CSS for basic styling
 const styles = {
     container: {
@@ -56,9 +55,17 @@ const styles = {
         border: "none",
         borderRadius: "4px",
     },
+    bpmInput: {
+        marginBottom: "20px",
+        padding: "5px",
+        fontSize: "16px",
+        width: "100px",
+    },
 };
 
 const DrumMachine: React.FC = () => {
+    const [bpm, setBpm] = useState<number>(128);  // New state for BPM input
+
     const [drumLoop, setDrumLoop] = useState<DrumLoop>({
         bpm: 128,
         tracks: [
@@ -192,9 +199,39 @@ const DrumMachine: React.FC = () => {
         }
     };
 
+    const handleBpmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+
+        if (isNaN(value) || value < 1 || value > 10000) {
+            setBpm(128); // Default to 128 if out of range or NaN
+            setDrumLoop((prevLoop) => ({
+                ...prevLoop,
+                bpm: 128,
+            }));
+        } else {
+            setBpm(value); // Update with valid value
+            setDrumLoop((prevLoop) => ({
+                ...prevLoop,
+                bpm: value,
+            }));
+        }
+    };
     return (
         <div style={styles.container}>
             <h1>Drum Machine</h1>
+
+            {/* BPM Input */}
+            <div>
+                <label htmlFor="bpm-input">BPM: </label>
+                <input
+                    type="number"
+                    id="bpm-input"
+                    value={bpm}
+                    onChange={handleBpmChange}
+                    style={styles.bpmInput}
+                />
+            </div>
+
             {drumLoop.tracks.map((track: Track, trackIndex: number) => (
                 <div key={trackIndex} style={styles.trackContainer}>
                     <button
