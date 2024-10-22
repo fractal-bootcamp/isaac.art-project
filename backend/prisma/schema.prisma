@@ -7,10 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// This one is just the default
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model DrumLoop {
+  id     String  @id @default(cuid()) // Unique identifier for the drum loop
+  bpm    Int     @default(120) // BPM with a default value of 120
+  tracks Track[] // Array of tracks associated with this drum loop
+
+  createdAt DateTime @default(now()) // Store when the drum loop was created
+  updatedAt DateTime @updatedAt // Automatically update the time when the loop is modified
+}
+
+model Track {
+  id         String    @id @default(cuid()) // Unique identifier for each track
+  instrument String // The instrument name or type (e.g., kick, snare, hi-hat)
+  pattern    Boolean[] // Not ideal... Really an array of booleans, either on or off // DOUBLE CHECK 
+  muted      Boolean
+  drumLoopId String // Foreign key to the DrumLoop
+  drumLoop   DrumLoop  @relation(fields: [drumLoopId], references: [id], onDelete: Cascade)
 }

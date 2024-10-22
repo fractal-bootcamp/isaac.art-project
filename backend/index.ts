@@ -1,91 +1,54 @@
+import { PrismaClient } from "@prisma/client";
 import express from "express";
+import type { Request, Response } from "express";
 import cors from "cors";
-import type { DrumLoop } from "../frontend/src/DrumLoopLogic";
+import bodyParser from "body-parser"; // For parsing request bodies
 
+const prisma = new PrismaClient();
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// In-memory storage for drum loops
-const drumLoops: DrumLoop[] = [];
-
-// Apply CORS middleware
+// Middleware to parse JSON bodies
+app.use(bodyParser.json());
 app.use(cors());
 
-// Body parser middleware (JSON)
-app.use(express.json());
-
-// Save drum loop configuration
-app.post("/api/save-drum-loop", (req, res) => {
+// POST endpoint to save drum loop data
+// POST endpoint to save drum loop data
+app.post("/api/save-drum-loop", async (req: Request, res: Response) => {
+  // FIX THIS!
   try {
-    const drumLoopData = req.body;
+    // Extract the drum loop data from the request body
+    const { bpm, tracks } = req.body;
 
-    // Generate a simple ID
-    const id = Math.random().toString(36).substring(2, 15);
+    if (!bpm || !tracks || !Array.isArray(tracks)) {
+      return res.status(400).json({ error: "Invalid drum loop data" });
+    }
 
-    // Add timestamp and ID to the data
-    const drumLoop = {
-      id,
-      ...drumLoopData,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Save to array
-    drumLoops.push(drumLoop);
-
-    res.json({
-      success: true,
-      message: "Drum loop saved successfully",
-      id: id,
+    // Create the drum loop and related tracks in the database
+    const createdDrumLoop = await prisma.drumLoop.create({
+      data: {
+        bpm,
+        tracks: {
+          create: tracks.map((track: any) => ({
+            instrument: track.name, // Adjust field name if necessary
+            pattern: track.pattern, // Storing the pattern array as JSON
+            muted: track.muted || false,
+          })),
+        },
+      },
+      include: {
+        tracks: true, // Include tracks in the response
+      },
     });
+
+    // Send the created drum loop as a response
+    res.status(201).json(createdDrumLoop);
   } catch (error) {
     console.error("Error saving drum loop:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to save drum loop",
-    });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// Get all drum loops
-app.get("/api/drum-loops", (req, res) => {
-  res.json(drumLoops);
-});
-
-// Get drum loop by ID
-app.get("/api/drum-loop/:id", (req, res) => {
-  const { id } = req.params;
-  const drumLoop = drumLoops.find((loop) => loop.id === id);
-
-  if (drumLoop) {
-    res.json(drumLoop);
-  } else {
-    res.status(404).json({
-      success: false,
-      message: "Drum loop not found",
-    });
-  }
-});
-
-// Delete drum loop
-app.delete("/api/drum-loop/:id", (req, res) => {
-  const { id } = req.params;
-  const index = drumLoops.findIndex((loop) => loop.id === id);
-
-  if (index !== -1) {
-    drumLoops.splice(index, 1);
-    res.json({
-      success: true,
-      message: "Drum loop deleted successfully",
-    });
-  } else {
-    res.status(404).json({
-      success: false,
-      message: "Drum loop not found",
-    });
-  }
-});
-
-// Start server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
