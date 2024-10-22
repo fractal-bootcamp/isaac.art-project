@@ -12,8 +12,10 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@elysiajs/cors": "^1.1.1",
     "@prisma/client": "^5.21.1",
     "cors": "^2.8.5",
+    "elysia": "^1.1.23",
     "express": "^4.21.1"
   }
 }
