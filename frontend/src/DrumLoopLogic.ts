@@ -4,14 +4,16 @@
 
 // Define the structure for a single track with a mute option
 export interface Track {
-  audioId: string; // Will correspond to an MP3 URL
-  pattern: boolean[]; // 32 booleans representing eighth notes
-  muted: boolean; // Indicates if the track is muted
+  name: string; // Keep track name for user reference
+  audioId: string; // Link to actual audio file
+  pattern: boolean[];
+  muted: boolean;
 }
 
 // Define the main DrumLoop interface
 export interface DrumLoop {
   tracks: Track[];
+  bpm: number;
   isPlaying: boolean;
   currentPlayIndex: number;
 }
@@ -20,13 +22,34 @@ export interface DrumLoop {
 export function createDrumLoop(): DrumLoop {
   return {
     tracks: [
-      { audioId: "", pattern: new Array(32).fill(false), muted: false },
-      { audioId: "", pattern: new Array(32).fill(false), muted: false },
-      { audioId: "", pattern: new Array(32).fill(false), muted: false },
-      { audioId: "", pattern: new Array(32).fill(false), muted: false },
+      {
+        name: "Kick",
+        audioId: "",
+        pattern: new Array(32).fill(false),
+        muted: false,
+      },
+      {
+        name: "Snare",
+        audioId: "",
+        pattern: new Array(32).fill(false),
+        muted: false,
+      },
+      {
+        name: "Clap",
+        audioId: "",
+        pattern: new Array(32).fill(false),
+        muted: false,
+      },
+      {
+        name: "Hat",
+        audioId: "",
+        pattern: new Array(32).fill(false),
+        muted: false,
+      },
     ],
     isPlaying: false,
     currentPlayIndex: 0,
+    bpm: 120, // Added bpm as per the DrumLoop interface
   };
 }
 

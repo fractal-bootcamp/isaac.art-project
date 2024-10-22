@@ -3,6 +3,9 @@ import Clap from "../samples/Clap.wav";
 import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
+import { Track, DrumLoop } from "../DrumLoopLogic";
+import { Howl } from "howler";
+
 
 // Optional: CSS for basic styling
 const styles = {
@@ -55,124 +58,99 @@ const styles = {
     },
 };
 
-interface Track {
-    name: string;
-    pattern: boolean[]; // length 32
-    muted: boolean;
-}
-
-interface DrumLoop {
-    tracks: Track[];
-    bpm: number;
-}
-
 const DrumMachine: React.FC = () => {
-    const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-    const [buffers, setBuffers] = useState<{ [key: string]: AudioBuffer }>({});
     const [drumLoop, setDrumLoop] = useState<DrumLoop>({
         bpm: 128,
         tracks: [
-            { name: "Kick", pattern: new Array(32).fill(false), muted: false },
-            { name: "Snare", pattern: new Array(32).fill(false), muted: false },
-            { name: "Clap", pattern: new Array(32).fill(false), muted: false },
-            { name: "Hat", pattern: new Array(32).fill(false), muted: false },
+            { name: "Kick", audioId: Kick, pattern: new Array(32).fill(false), muted: false },
+            { name: "Snare", audioId: Snare, pattern: new Array(32).fill(false), muted: false },
+            { name: "Clap", audioId: Clap, pattern: new Array(32).fill(false), muted: false },
+            { name: "Hat", audioId: Hat, pattern: new Array(32).fill(false), muted: false },
         ],
+        isPlaying: false,
+        currentPlayIndex: 0,
     });
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
     const isPlayingRef = useRef<boolean>(false);
-    const scheduledNodesRef = useRef<AudioBufferSourceNode[]>([]);
     const noteIndexRef = useRef<number>(0);
     const nextNoteTimeRef = useRef<number>(0);
     const drumLoopRef = useRef<DrumLoop>(drumLoop);
+
+    const [howls, setHowls] = useState<{ [key: string]: Howl }>({});
 
     useEffect(() => {
         drumLoopRef.current = drumLoop;
     }, [drumLoop]);
 
     useEffect(() => {
-        const context = new AudioContext();
-        setAudioContext(context);
+        // Load sounds using Howler.js
+        const loadSamples = () => {
+            const sampleNames = ["Kick", "Snare", "Clap", "Hat"] as const;
+            const sampleFiles: Record<typeof sampleNames[number], string> = {
+                Kick,
+                Snare,
+                Clap,
+                Hat,
+            };
 
-        const sampleNames = ["Kick", "Snare", "Clap", "Hat"] as const;
-        type SampleName = typeof sampleNames[number];
-
-        const sampleFiles: Record<SampleName, string> = {
-            Kick,
-            Snare,
-            Clap,
-            Hat,
-        };
-
-        const loadSamples = async () => {
-            const buffers: { [key: string]: AudioBuffer } = {};
-            for (const name of sampleNames) {
-                try {
-                    const response = await fetch(sampleFiles[name]);
-                    const arrayBuffer = await response.arrayBuffer();
-                    const audioBuffer = await context.decodeAudioData(arrayBuffer);
-                    buffers[name] = audioBuffer;
-                } catch (error) {
-                    console.error(`Error loading sample ${name}:`, error);
-                }
-            }
-            setBuffers(buffers);
+            const loadedHowls: { [key: string]: Howl } = {};
+            sampleNames.forEach((name) => {
+                loadedHowls[name] = new Howl({
+                    src: [sampleFiles[name]],
+                    preload: true,
+                });
+            });
+            setHowls(loadedHowls);
         };
 
         loadSamples();
-
-        // Cleanup function to close the AudioContext when component unmounts
-        return () => {
-            context.close();
-        };
     }, []);
 
-    // Deep copy utility function
-    const deepCopyDrumLoop = (loop: DrumLoop): DrumLoop => {
-        return {
-            bpm: loop.bpm,
-            tracks: loop.tracks.map(track => ({
-                name: track.name,
-                pattern: [...track.pattern],
-                muted: track.muted,
-            })),
-        };
-    };
-
     const handleToggleNote = (trackIndex: number, noteIndex: number) => {
-        setDrumLoop(prevLoop => {
-            const updatedLoop = deepCopyDrumLoop(prevLoop);
-            updatedLoop.tracks[trackIndex].pattern[noteIndex] = !updatedLoop.tracks[trackIndex].pattern[noteIndex];
-            return updatedLoop;
+        setDrumLoop((prevLoop) => {
+            const updatedTracks = prevLoop.tracks.map((track, idx) => {
+                if (idx === trackIndex) {
+                    const updatedPattern = [...track.pattern];
+                    updatedPattern[noteIndex] = !updatedPattern[noteIndex];
+                    return { ...track, pattern: updatedPattern };
+                }
+                return track;
+            });
+            return { ...prevLoop, tracks: updatedTracks };
         });
     };
 
     const handleToggleMute = (trackIndex: number) => {
-        setDrumLoop(prevLoop => {
-            const updatedLoop = deepCopyDrumLoop(prevLoop);
-            updatedLoop.tracks[trackIndex].muted = !updatedLoop.tracks[trackIndex].muted;
-            return updatedLoop;
+        setDrumLoop((prevLoop) => {
+            const updatedTracks = prevLoop.tracks.map((track, idx) => {
+                if (idx === trackIndex) {
+                    return { ...track, muted: !track.muted };
+                }
+                return track;
+            });
+            return { ...prevLoop, tracks: updatedTracks };
         });
     };
 
     const handlePlay = () => {
-        if (!audioContext || Object.keys(buffers).length === 0 || isPlayingRef.current) return;
+        if (isPlayingRef.current || !Object.keys(howls).length) return;
 
         setIsPlaying(true);
         isPlayingRef.current = true;
-        scheduledNodesRef.current = [];
 
         const sixteenthNoteDuration = 60 / drumLoop.bpm / 4;
 
         noteIndexRef.current = 0;
-        nextNoteTimeRef.current = audioContext.currentTime;
+        nextNoteTimeRef.current = performance.now();
 
-        const scheduleAheadTime = 0.5; // seconds
+        const scheduleAheadTime = 100; // milliseconds
 
         const scheduler = () => {
+            const currentTime = performance.now();
+
             while (
-                nextNoteTimeRef.current <
-                audioContext.currentTime + scheduleAheadTime
+                nextNoteTimeRef.current < currentTime + scheduleAheadTime
             ) {
                 // Schedule the notes
                 drumLoopRef.current.tracks.forEach((track) => {
@@ -180,20 +158,17 @@ const DrumMachine: React.FC = () => {
                         track.pattern[noteIndexRef.current % 32] &&
                         !track.muted
                     ) {
-                        const buffer = buffers[track.name];
-                        if (buffer) {
-                            const source = audioContext.createBufferSource();
-                            source.buffer = buffer;
-                            source.connect(audioContext.destination);
-                            source.start(nextNoteTimeRef.current);
-                            // Keep track of the scheduled nodes
-                            scheduledNodesRef.current.push(source);
+                        const howl = howls[track.name];
+                        if (howl) {
+                            howl.play();
                         }
                     }
                 });
-                nextNoteTimeRef.current += sixteenthNoteDuration;
+
+                nextNoteTimeRef.current += sixteenthNoteDuration * 1000; // convert to milliseconds
                 noteIndexRef.current++;
             }
+
             if (isPlayingRef.current) {
                 setTimeout(scheduler, 25); // Reduced interval for better responsiveness
             }
@@ -203,15 +178,8 @@ const DrumMachine: React.FC = () => {
     };
 
     const handleStop = () => {
-        if (!audioContext || !isPlayingRef.current) return;
-
         setIsPlaying(false);
         isPlayingRef.current = false;
-
-        scheduledNodesRef.current.forEach((node) => {
-            node.stop();
-        });
-        scheduledNodesRef.current = [];
     };
 
     // Function to get the background color based on the note index and state
