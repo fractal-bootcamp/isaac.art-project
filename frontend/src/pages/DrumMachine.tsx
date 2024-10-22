@@ -4,8 +4,8 @@ import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { Track, DrumLoop } from "../DrumLoopLogic";
-import AudioEngine from "../audioEngine"; // Adjust the path as needed
-// Function to get the background color based on the note index and state
+import AudioEngine from "../audioEngine";
+
 const getNoteColor = (noteIndex: number, isActive: boolean) => {
     const isDarkGroup = Math.floor(noteIndex / 4) % 2 !== 0;
     if (isActive) {
@@ -69,6 +69,14 @@ const styles = {
         padding: "5px",
         fontSize: "16px",
         width: "100px",
+    },
+    shareButton: {
+        padding: '10px 20px',
+        backgroundColor: '#2196F3',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
     },
 };
 
@@ -147,8 +155,6 @@ const DrumMachine: React.FC = () => {
         }
     };
 
-
-
     const handleBpmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseInt(e.target.value, 10);
 
@@ -165,6 +171,33 @@ const DrumMachine: React.FC = () => {
                 bpm: value,
             }));
         }
+    };
+
+    // New function to share the drum loop configuration as JSON
+    const handleShare = () => {
+        const drumLoopData = {
+            bpm: drumLoop.bpm,
+            tracks: drumLoop.tracks.map((track) => ({
+                name: track.name,
+                pattern: track.pattern,
+                muted: track.muted,
+            })),
+        };
+
+        fetch('http://localhost:3000/api/save-drum-loop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(drumLoopData),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
     };
 
     return (
@@ -223,7 +256,7 @@ const DrumMachine: React.FC = () => {
                     </div>
                 </div>
             ))}
-
+            {/* Play Button */}
             <div style={styles.controls}>
                 {!isPlaying ? (
                     <button onClick={handlePlay} style={styles.controlButton}>
@@ -234,6 +267,13 @@ const DrumMachine: React.FC = () => {
                         Stop
                     </button>
                 )}
+            </div>
+
+            {/* Share Button */}
+            <div>
+                <button onClick={handleShare} style={styles.shareButton}>
+                    Share
+                </button>
             </div>
         </div>
     );
