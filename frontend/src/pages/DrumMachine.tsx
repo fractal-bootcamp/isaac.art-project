@@ -4,7 +4,16 @@ import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { Track, DrumLoop } from "../DrumLoopLogic";
-import { Howl } from "howler";
+import AudioEngine from "../audioEngine"; // Adjust the path as needed
+// Function to get the background color based on the note index and state
+const getNoteColor = (noteIndex: number, isActive: boolean) => {
+    const isDarkGroup = Math.floor(noteIndex / 4) % 2 !== 0;
+    if (isActive) {
+        return isDarkGroup ? "#3a8a3d" : "#4caf50"; // Darker and lighter green
+    } else {
+        return isDarkGroup ? "#bdbdbd" : "#ddd"; // Darker and lighter gray
+    }
+};
 
 // Optional: CSS for basic styling
 const styles = {
@@ -64,8 +73,7 @@ const styles = {
 };
 
 const DrumMachine: React.FC = () => {
-    const [bpm, setBpm] = useState<number>(128);  // New state for BPM input
-
+    const [bpm, setBpm] = useState<number>(128);  // BPM state
     const [drumLoop, setDrumLoop] = useState<DrumLoop>({
         bpm: 128,
         tracks: [
@@ -79,40 +87,25 @@ const DrumMachine: React.FC = () => {
     });
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
-    const isPlayingRef = useRef<boolean>(false);
-    const noteIndexRef = useRef<number>(0);
-    const nextNoteTimeRef = useRef<number>(0);
-    const drumLoopRef = useRef<DrumLoop>(drumLoop);
-
-    const [howls, setHowls] = useState<{ [key: string]: Howl }>({});
+    const audioEngineRef = useRef<AudioEngine | null>(null);
 
     useEffect(() => {
-        drumLoopRef.current = drumLoop;
-    }, [drumLoop]);
-
-    useEffect(() => {
-        // Load sounds using Howler.js
-        const loadSamples = () => {
-            const sampleNames = ["Kick", "Snare", "Clap", "Hat"] as const;
-            const sampleFiles: Record<typeof sampleNames[number], string> = {
-                Kick,
-                Snare,
-                Clap,
-                Hat,
-            };
-
-            const loadedHowls: { [key: string]: Howl } = {};
-            sampleNames.forEach((name) => {
-                loadedHowls[name] = new Howl({
-                    src: [sampleFiles[name]],
-                    preload: true,
-                });
-            });
-            setHowls(loadedHowls);
+        // Initialize AudioEngine
+        audioEngineRef.current = new AudioEngine(drumLoop);
+        return () => {
+            // Cleanup on unmount
+            if (audioEngineRef.current) {
+                audioEngineRef.current.stop();
+            }
         };
-
-        loadSamples();
     }, []);
+
+    useEffect(() => {
+        // Update AudioEngine when drumLoop changes
+        if (audioEngineRef.current) {
+            audioEngineRef.current.updateDrumLoop(drumLoop);
+        }
+    }, [drumLoop]);
 
     const handleToggleNote = (trackIndex: number, noteIndex: number) => {
         setDrumLoop((prevLoop) => {
@@ -141,63 +134,20 @@ const DrumMachine: React.FC = () => {
     };
 
     const handlePlay = () => {
-        if (isPlayingRef.current || !Object.keys(howls).length) return;
-
-        setIsPlaying(true);
-        isPlayingRef.current = true;
-
-        const sixteenthNoteDuration = 60 / drumLoop.bpm / 4;
-
-        noteIndexRef.current = 0;
-        nextNoteTimeRef.current = performance.now();
-
-        const scheduleAheadTime = 100; // milliseconds
-
-        const scheduler = () => {
-            const currentTime = performance.now();
-
-            while (
-                nextNoteTimeRef.current < currentTime + scheduleAheadTime
-            ) {
-                // Schedule the notes
-                drumLoopRef.current.tracks.forEach((track) => {
-                    if (
-                        track.pattern[noteIndexRef.current % 32] &&
-                        !track.muted
-                    ) {
-                        const howl = howls[track.name];
-                        if (howl) {
-                            howl.play();
-                        }
-                    }
-                });
-
-                nextNoteTimeRef.current += sixteenthNoteDuration * 1000; // convert to milliseconds
-                noteIndexRef.current++;
-            }
-
-            if (isPlayingRef.current) {
-                setTimeout(scheduler, 25); // Reduced interval for better responsiveness
-            }
-        };
-
-        scheduler();
+        if (!isPlaying && audioEngineRef.current) {
+            audioEngineRef.current.play();
+            setIsPlaying(true);
+        }
     };
 
     const handleStop = () => {
-        setIsPlaying(false);
-        isPlayingRef.current = false;
-    };
-
-    // Function to get the background color based on the note index and state
-    const getNoteColor = (noteIndex: number, isActive: boolean) => {
-        const isDarkGroup = Math.floor(noteIndex / 4) % 2 !== 0;
-        if (isActive) {
-            return isDarkGroup ? "#3a8a3d" : "#4caf50"; // Darker and lighter green
-        } else {
-            return isDarkGroup ? "#bdbdbd" : "#ddd"; // Darker and lighter gray
+        if (isPlaying && audioEngineRef.current) {
+            audioEngineRef.current.stop();
+            setIsPlaying(false);
         }
     };
+
+
 
     const handleBpmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseInt(e.target.value, 10);
@@ -216,6 +166,7 @@ const DrumMachine: React.FC = () => {
             }));
         }
     };
+
     return (
         <div style={styles.container}>
             <h1>Drum Machine</h1>
