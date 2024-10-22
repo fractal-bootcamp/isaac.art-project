@@ -12,7 +12,6 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // POST endpoint to save drum loop data
-// POST endpoint to save drum loop data
 app.post("/api/save-drum-loop", async (req: Request, res: Response) => {
   // FIX THIS!
   try {
