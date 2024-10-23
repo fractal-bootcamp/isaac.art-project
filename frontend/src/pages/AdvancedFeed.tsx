@@ -43,22 +43,32 @@ const DrumMachine = ({
     const audioEngineRef = useRef<AudioEngine | null>(null);
 
     useEffect(() => {
-        if (!readonly) {
-            audioEngineRef.current = new AudioEngine(pattern);
+        // Initialize audio engine regardless of readonly status
+        audioEngineRef.current = new AudioEngine(pattern);
 
-            return () => {
-                if (audioEngineRef.current) {
-                    audioEngineRef.current.stop();
-                }
-            };
-        }
-    }, [readonly]);
+        return () => {
+            if (audioEngineRef.current) {
+                audioEngineRef.current.stop();
+            }
+        };
+    }, []); // Only run on mount
 
     useEffect(() => {
         if (audioEngineRef.current) {
             audioEngineRef.current.updateDrumLoop(pattern);
         }
     }, [pattern]);
+
+    // Update playback state when isPlaying prop changes
+    useEffect(() => {
+        if (audioEngineRef.current) {
+            if (isPlaying) {
+                audioEngineRef.current.play();
+            } else {
+                audioEngineRef.current.stop();
+            }
+        }
+    }, [isPlaying]);
 
     const handleToggleNote = (trackIndex: number, noteIndex: number) => {
         if (readonly || !setPattern) return;
@@ -85,17 +95,16 @@ const DrumMachine = ({
 
     const handleBpmChange = (newBpm: number) => {
         if (readonly || !setPattern) return;
-        setPattern({ ...pattern, bpm: newBpm });
+
+        if (isNaN(newBpm) || newBpm < 1 || newBpm > 10000) {
+            setPattern({ ...pattern, bpm: 128 });
+        } else {
+            setPattern({ ...pattern, bpm: newBpm });
+        }
     };
 
     const handlePlayToggle = () => {
         if (!onPlayToggle) return;
-
-        if (!isPlaying && audioEngineRef.current) {
-            audioEngineRef.current.play();
-        } else if (audioEngineRef.current) {
-            audioEngineRef.current.stop();
-        }
         onPlayToggle(!isPlaying);
     };
 
@@ -113,14 +122,12 @@ const DrumMachine = ({
                         disabled={readonly}
                     />
                 </div>
-                {!readonly && (
-                    <button
-                        onClick={handlePlayToggle}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    >
-                        {isPlaying ? 'Stop' : 'Play'}
-                    </button>
-                )}
+                <button
+                    onClick={handlePlayToggle}
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                    {isPlaying ? 'Stop' : 'Play'}
+                </button>
             </div>
 
             <div className="space-y-3">
@@ -235,6 +242,10 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
 // Post Component
 const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => void }) => {
     const [isPlaying, setIsPlaying] = useState(false);
+
+    const handlePlayToggle = () => {
+        setIsPlaying((prev) => !prev);
+    };
 
     return (
         <div className="p-6 bg-white rounded-lg shadow-lg mb-6">
