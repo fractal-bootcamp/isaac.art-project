@@ -6,7 +6,7 @@ import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop } from '../DrumLoopLogic';
 
-interface Post {
+export interface Post {
     id: string;
     title: string;
     pattern: DrumLoop;
@@ -270,7 +270,7 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
 };
 
 // Post Component
-const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => void }) => {
+export const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => void }) => {
     const [isPlaying, setIsPlaying] = useState(false);
 
     return (
