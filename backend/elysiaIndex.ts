@@ -76,6 +76,32 @@ app.post(
   }
 );
 
+// GET endpoint to retrieve recent drum loops
+app.get("/api/latest-loops", async () => {
+  try {
+    const recentDrumLoops = await prisma.drumLoop.findMany({
+      orderBy: {
+        createdAt: "desc", // Order by creation date, descending
+      },
+      take: 10, // Adjust the number of recent loops to retrieve
+      include: {
+        tracks: true, // Include tracks in the response
+      },
+    });
+
+    return {
+      status: 200,
+      body: recentDrumLoops,
+    };
+  } catch (error) {
+    console.error("Error retrieving recent drum loops:", error);
+    return {
+      status: 500,
+      body: { error: "Internal server error" },
+    };
+  }
+});
+
 // Listen on port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
