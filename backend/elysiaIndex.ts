@@ -21,7 +21,13 @@ app.post(
   "/api/save-drum-loop",
   async ({ body }: { body: Omit<DrumLoop, "id"> }) => {
     try {
-      const { bpm, tracks }: { bpm: number; tracks: Track[] } = body;
+      const {
+        bpm,
+        tracks,
+        username,
+        title,
+      }: { bpm: number; tracks: Track[]; username: string; title: string } =
+        body;
 
       // Validate that each track conforms to the expected structure
       for (const track of tracks) {
@@ -36,8 +42,8 @@ app.post(
       // Create the drum loop and related tracks in the database
       const createdDrumLoop = await prisma.drumLoop.create({
         data: {
-          username: "placeholder_username", // TODO - update frontend
-          title: "placeholder_title", // TODO - update frontend
+          username, // Now coming from body
+          title, // Now coming from body
           bpm,
           tracks: {
             create: tracks.map((track: Track) => ({

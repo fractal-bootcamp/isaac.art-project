@@ -6,12 +6,11 @@ import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop } from '../DrumLoopLogic';
 
-// Types
 interface Post {
     id: string;
     title: string;
     pattern: DrumLoop;
-    authorName: string;
+    username: string;
     likes: number;
 }
 
@@ -163,7 +162,7 @@ const DrumMachine = ({
 // Create Post Component
 const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
     const [title, setTitle] = useState('');
-    const [authorName, setAuthorName] = useState('');
+    const [username, setUsername] = useState('');
     const [isPlaying, setIsPlaying] = useState(false);
     const [pattern, setPattern] = useState<DrumLoop>({
         bpm: 128,
@@ -177,9 +176,11 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
         currentPlayIndex: 0
     });
 
-    // New function to share the drum loop configuration as JSON
+    // Modified handleShare function to include username and title
     const handleShare = () => {
         const drumLoopData = {
+            title: title,
+            username: username,
             bpm: pattern.bpm,
             tracks: pattern.tracks.map((track) => ({
                 name: track.name,
@@ -205,16 +206,16 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
     };
 
     const handleSubmit = () => {
-        if (title.trim() && authorName.trim()) {
+        if (title.trim() && username.trim()) {
             addPost({
                 id: Date.now().toString(),
                 title,
                 pattern,
-                authorName,
+                username,
                 likes: 0
             });
             setTitle('');
-            setAuthorName('');
+            setUsername('');
             setIsPlaying(false);
 
             // Reset pattern to default
@@ -247,8 +248,8 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
             />
             <input
                 type="text"
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full p-2 border rounded mb-4"
                 placeholder="Your name"
             />
@@ -277,7 +278,7 @@ const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => void }) =>
             <div className="flex justify-between items-center mb-4">
                 <div>
                     <h3 className="text-lg font-semibold">{post.title}</h3>
-                    <p className="text-sm text-gray-600">Created by {post.authorName}</p>
+                    <p className="text-sm text-gray-600">Created by {post.username}</p>
                 </div>
                 <button
                     onClick={() => onLike(post.id)}
