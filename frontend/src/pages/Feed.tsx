@@ -74,7 +74,7 @@ const DrumMachine = ({
             <div className="space-y-3">
                 {pattern.tracks.map((track, trackIndex) => (
                     <div key={trackIndex} className="flex items-center gap-3">
-                        <span className="w-16 text-sm">{track.instrument}</span>
+                        <span className="w-16 text-sm">{track.name}</span>
                         <div className="grid grid-flow-col auto-cols-max gap-1">
                             {track.pattern.map((note, noteIndex) => (
                                 <div
