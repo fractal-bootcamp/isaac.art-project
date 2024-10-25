@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import AudioEngine from '../audioEngine';
-// Import your audio samples
 import Clap from "../samples/Clap.wav";
 import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
-import { Track, DrumLoop } from '../DrumLoopLogic';
+import { DrumLoop } from '../DrumLoopLogic';
 
 // Types
-
 interface Post {
     id: string;
     title: string;
@@ -179,6 +177,33 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
         currentPlayIndex: 0
     });
 
+    // New function to share the drum loop configuration as JSON
+    const handleShare = () => {
+        const drumLoopData = {
+            bpm: pattern.bpm,
+            tracks: pattern.tracks.map((track) => ({
+                name: track.name,
+                pattern: track.pattern,
+                muted: track.muted,
+            })),
+        };
+
+        fetch('http://localhost:3000/api/save-drum-loop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(drumLoopData),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+    };
+
     const handleSubmit = () => {
         if (title.trim() && authorName.trim()) {
             addPost({
@@ -191,6 +216,7 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
             setTitle('');
             setAuthorName('');
             setIsPlaying(false);
+
             // Reset pattern to default
             setPattern({
                 bpm: 128,
@@ -203,6 +229,9 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
                 isPlaying: false,
                 currentPlayIndex: 0
             });
+
+            // Call handleShare to send data to backend
+            handleShare();
         }
     };
 
@@ -242,10 +271,6 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
 // Post Component
 const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => void }) => {
     const [isPlaying, setIsPlaying] = useState(false);
-
-    const handlePlayToggle = () => {
-        setIsPlaying((prev) => !prev);
-    };
 
     return (
         <div className="p-6 bg-white rounded-lg shadow-lg mb-6">
