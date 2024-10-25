@@ -5,15 +5,7 @@ import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop } from '../DrumLoopLogic';
-
-// Utility function for note colors
-const getNoteColor = (noteIndex: number, isActive: boolean) => {
-    const isDarkGroup = Math.floor(noteIndex / 4) % 2 !== 0;
-    if (isActive) {
-        return isDarkGroup ? "bg-green-600" : "bg-green-500";
-    }
-    return isDarkGroup ? "bg-gray-300" : "bg-gray-200";
-};
+import { getNoteColor } from './Builder';
 
 // DrumMachine Component (simplified for readonly playback)
 const DrumMachine = ({

@@ -15,7 +15,7 @@ interface Post {
 }
 
 // Utility function for note colors
-const getNoteColor = (noteIndex: number, isActive: boolean) => {
+export const getNoteColor = (noteIndex: number, isActive: boolean) => {
     const isDarkGroup = Math.floor(noteIndex / 4) % 2 !== 0;
     if (isActive) {
         return isDarkGroup ? "bg-green-600" : "bg-green-500";
