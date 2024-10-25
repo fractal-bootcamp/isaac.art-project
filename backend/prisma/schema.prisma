@@ -23,7 +23,7 @@ model DrumLoop {
   createdAt DateTime @default(now()) // Store when the drum loop was created
   updatedAt DateTime @updatedAt // Automatically update the time when the loop is modified
   username  String // Username who created the drum loop
-  name      String // Name of the beat
+  title     String   @default("Default title") // Name of the beat, todo delete that
 }
 
 model Track {

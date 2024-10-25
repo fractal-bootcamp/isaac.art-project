@@ -37,7 +37,7 @@ app.post(
       const createdDrumLoop = await prisma.drumLoop.create({
         data: {
           username: "placeholder_username", // TODO - update frontend
-          name: "placeholder_name", // TODO - update frontend
+          title: "placeholder_title", // TODO - update frontend
           bpm,
           tracks: {
             create: tracks.map((track: Track) => ({
