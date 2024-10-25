@@ -1,4 +1,3 @@
-// audioEngine.ts
 import { Howl } from "howler";
 import { DrumLoop } from "./DrumLoopLogic";
 
@@ -21,20 +20,19 @@ class AudioEngine {
   }
 
   private loadSamples() {
-    const sampleNames = ["Kick", "Snare", "Clap", "Hat"] as const;
-    const sampleFiles: Record<(typeof sampleNames)[number], string> = {
-      Kick: this.drumLoop.tracks.find((track) => track.name === "Kick")!
-        .audioId,
-      Snare: this.drumLoop.tracks.find((track) => track.name === "Snare")!
-        .audioId,
-      Clap: this.drumLoop.tracks.find((track) => track.name === "Clap")!
-        .audioId,
-      Hat: this.drumLoop.tracks.find((track) => track.name === "Hat")!.audioId,
-    };
+    // Create a map of all unique track names to their audio IDs
+    const sampleFiles = this.drumLoop.tracks.reduce(
+      (acc, track) => ({
+        ...acc,
+        [track.name]: track.audioId,
+      }),
+      {} as Record<string, string>
+    );
 
-    sampleNames.forEach((name) => {
+    // Load each unique sample
+    Object.entries(sampleFiles).forEach(([name, audioId]) => {
       this.howls[name] = new Howl({
-        src: [sampleFiles[name]],
+        src: [audioId],
         preload: true,
       });
     });
@@ -43,6 +41,32 @@ class AudioEngine {
   public updateDrumLoop(drumLoop: DrumLoop) {
     this.drumLoop = drumLoop;
     this.bpm = drumLoop.bpm;
+
+    // Check if we need to load any new samples
+    const currentSamples = Object.keys(this.howls);
+    const newSamples = drumLoop.tracks
+      .map((track) => track.name)
+      .filter((name) => !currentSamples.includes(name));
+
+    if (newSamples.length > 0) {
+      const newSampleFiles = drumLoop.tracks
+        .filter((track) => newSamples.includes(track.name))
+        .reduce(
+          (acc, track) => ({
+            ...acc,
+            [track.name]: track.audioId,
+          }),
+          {} as Record<string, string>
+        );
+
+      // Load any new samples
+      Object.entries(newSampleFiles).forEach(([name, audioId]) => {
+        this.howls[name] = new Howl({
+          src: [audioId],
+          preload: true,
+        });
+      });
+    }
   }
 
   public play() {
