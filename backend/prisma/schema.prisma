@@ -17,10 +17,9 @@ model User {
 }
 
 model DrumLoop {
-  id     String  @id @default(cuid()) // Unique identifier for the drum loop
-  bpm    Int     @default(120) // BPM with a default value of 120
-  tracks Track[] // Array of tracks associated with this drum loop
-
+  id        String   @id @default(cuid()) // Unique identifier for the drum loop
+  bpm       Int      @default(120) // BPM with a default value of 120
+  tracks    Track[] // Array of tracks associated with this drum loop
   createdAt DateTime @default(now()) // Store when the drum loop was created
   updatedAt DateTime @updatedAt // Automatically update the time when the loop is modified
 }
