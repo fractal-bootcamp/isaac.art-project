@@ -2,7 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-ro
 import Home from './pages/Home';
 import About from './pages/About';
 import DrumLoopPlayer from './pages/DrumMachine';
-import AdvancedFeed from './pages/AdvancedFeed';
+import Builder from './pages/Builder';
+import Feed from './pages/Feed';
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from "@clerk/clerk-react";
 
 function App() {
@@ -15,7 +16,8 @@ function App() {
           <Link to="/" className="mr-4">Home</Link>
           <Link to="/about" className="mr-4">About</Link>
           <Link to="/drum-loop" className="mr-4">Drum Loop</Link>
-          <Link to="/advancedfeed" className="mr-4">Advanced Feed</Link>
+          <Link to="/feed" className="mr-4">Feed</Link>
+          <Link to="/builder" className="mr-4">Builder</Link>
         </div>
         <div>
           <SignedOut>
@@ -31,11 +33,12 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/drum-loop" element={<DrumLoopPlayer />} />
+          <Route path="/feed" element={<Feed />} />
 
-          {/* Conditionally render AdvancedFeed only if signed in, otherwise redirect */}
+          {/* Conditionally render builder only if signed in, otherwise redirect */}
           <Route
-            path="/advancedfeed"
-            element={isSignedIn ? <AdvancedFeed /> : <Navigate to="/" />}
+            path="/builder"
+            element={isSignedIn ? <Builder /> : <Navigate to="/" />}
           />
         </Routes>
       </div>
