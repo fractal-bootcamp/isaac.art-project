@@ -9,6 +9,8 @@ export interface Track {
 export interface DrumLoop {
   tracks: Track[];
   bpm: number;
+  username: string;
+  title: string;
   //   isPlaying: boolean; // NOTE - in the backend version, we omit isPlaying as we don't need it
   //   currentPlayIndex: number; // Again, we also don't really need this for the backend
   id: string;
