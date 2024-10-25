@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { ReactNode } from 'react';
 import Home from './pages/Home';
 import About from './pages/About';
 import DrumLoopPlayer from './pages/DrumMachine';
@@ -7,8 +8,13 @@ import Feed from './pages/Feed';
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from "@clerk/clerk-react";
 import { RedirectToSignIn } from "@clerk/clerk-react";
 
+// Define props type for ProtectedRoute component
+type ProtectedRouteProps = {
+  children: ReactNode;
+};
+
 // Protected Route component
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isSignedIn, isLoaded } = useAuth();
 
   // Show loading state while Clerk is initializing
@@ -22,7 +28,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // If user is signed in, render the protected content
-  return children;
+  return <>{children}</>;
 };
 
 function App() {
