@@ -6,7 +6,7 @@ import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop } from '../DrumLoopLogic';
 
-interface Post {
+export interface Post {
     id: string;
     title: string;
     pattern: DrumLoop;
@@ -15,7 +15,7 @@ interface Post {
 }
 
 // Utility function for note colors
-const getNoteColor = (noteIndex: number, isActive: boolean) => {
+export const getNoteColor = (noteIndex: number, isActive: boolean) => {
     const isDarkGroup = Math.floor(noteIndex / 4) % 2 !== 0;
     if (isActive) {
         return isDarkGroup ? "bg-green-600" : "bg-green-500";
@@ -270,7 +270,7 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
 };
 
 // Post Component
-const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => void }) => {
+export const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => void }) => {
     const [isPlaying, setIsPlaying] = useState(false);
 
     return (

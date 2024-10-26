@@ -1,13 +1,43 @@
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { ReactNode } from 'react';
 import Home from './pages/Home';
 import About from './pages/About';
 import DrumLoopPlayer from './pages/DrumMachine';
 import Builder from './pages/Builder';
 import Feed from './pages/Feed';
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from "@clerk/clerk-react";
+import { RedirectToSignIn } from "@clerk/clerk-react";
+
+// Define props type for ProtectedRoute component
+type ProtectedRouteProps = {
+  children: ReactNode;
+};
+
+// Protected Route component
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  // Show loading state while Clerk is initializing
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
+
+  // If user is not signed in, redirect to sign-in page
+  if (!isSignedIn) {
+    return <RedirectToSignIn />;
+  }
+
+  // If user is signed in, render the protected content
+  return <>{children}</>;
+};
 
 function App() {
-  const { isSignedIn } = useAuth(); // This hook gives us the signed-in state
+  const { isLoaded } = useAuth();
+
+  // Show loading state while Clerk is initializing
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Router>
@@ -21,7 +51,7 @@ function App() {
         </div>
         <div>
           <SignedOut>
-            <SignInButton />
+            <SignInButton mode="modal" />
           </SignedOut>
           <SignedIn>
             <UserButton />
@@ -34,11 +64,13 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/drum-loop" element={<DrumLoopPlayer />} />
           <Route path="/feed" element={<Feed />} />
-
-          {/* Conditionally render builder only if signed in, otherwise redirect */}
           <Route
             path="/builder"
-            element={isSignedIn ? <Builder /> : <Navigate to="/" />}
+            element={
+              <ProtectedRoute>
+                <Builder />
+              </ProtectedRoute>
+            }
           />
         </Routes>
       </div>

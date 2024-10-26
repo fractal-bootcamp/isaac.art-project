@@ -1,98 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
-import AudioEngine from '../audioEngine';
+import { useState, useEffect } from 'react';
+import { Post as PostComponent, Post as PostInterface } from './Builder';
 import Clap from "../samples/Clap.wav";
 import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop } from '../DrumLoopLogic';
 
-// Utility function for note colors
-const getNoteColor = (noteIndex: number, isActive: boolean) => {
-    const isDarkGroup = Math.floor(noteIndex / 4) % 2 !== 0;
-    if (isActive) {
-        return isDarkGroup ? "bg-green-600" : "bg-green-500";
-    }
-    return isDarkGroup ? "bg-gray-300" : "bg-gray-200";
-};
+// Feed Post wrapper to convert DB format to DrumLoop format
+const FeedPost = ({ post }: { post: any }) => {
 
-// DrumMachine Component (simplified for readonly playback)
-const DrumMachine = ({
-    pattern,
-    isPlaying = false,
-    onPlayToggle
-}: {
-    pattern: DrumLoop;
-    isPlaying?: boolean;
-    onPlayToggle?: (playing: boolean) => void;
-}) => {
-    const audioEngineRef = useRef<AudioEngine | null>(null);
-
-    useEffect(() => {
-        audioEngineRef.current = new AudioEngine(pattern);
-        return () => {
-            if (audioEngineRef.current) {
-                audioEngineRef.current.stop();
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        if (audioEngineRef.current) {
-            audioEngineRef.current.updateDrumLoop(pattern);
-        }
-    }, [pattern]);
-
-    useEffect(() => {
-        if (audioEngineRef.current) {
-            if (isPlaying) {
-                audioEngineRef.current.play();
-            } else {
-                audioEngineRef.current.stop();
-            }
-        }
-    }, [isPlaying]);
-
-    const handlePlayToggle = () => {
-        if (!onPlayToggle) return;
-        onPlayToggle(!isPlaying);
+    // Function to handle likes
+    const handleLike = (id: string) => {
+        console.log(`Liked post with ID: ${id}`);
+        // Logic to update likes could go here
     };
-
-    return (
-        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">BPM: {pattern.bpm}</span>
-                </div>
-                <button
-                    onClick={handlePlayToggle}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                    {isPlaying ? 'Stop' : 'Play'}
-                </button>
-            </div>
-
-            <div className="space-y-3">
-                {pattern.tracks.map((track, trackIndex) => (
-                    <div key={trackIndex} className="flex items-center gap-3">
-                        <span className="w-16 text-sm">{track.name}</span>
-                        <div className="grid grid-flow-col auto-cols-max gap-1">
-                            {track.pattern.map((note, noteIndex) => (
-                                <div
-                                    key={noteIndex}
-                                    className={`w-4 h-6 rounded ${getNoteColor(noteIndex, note)}`}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-// Post Component (simplified for feed display)
-const Post = ({ post }: { post: any }) => {
-    const [isPlaying, setIsPlaying] = useState(false);
 
     // Convert DB format to DrumLoop format
     const convertTodrumLoop = (dbPost: any): DrumLoop => {
@@ -116,27 +37,17 @@ const Post = ({ post }: { post: any }) => {
         };
     };
 
-    const drumLoopPattern = convertTodrumLoop(post);
+    // Convert DB post to Post interface format
+    const convertedPost: PostInterface = {
+        id: post.id,
+        title: post.title,
+        pattern: convertTodrumLoop(post),
+        username: post.username,
+        likes: post.likes || 0
+    };
 
-    return (
-        <div className="p-6 bg-white rounded-lg shadow-lg mb-6">
-            <div className="flex justify-between items-center mb-4">
-                <div>
-                    <h3 className="text-lg font-semibold">{post.title}</h3>
-                    <p className="text-sm text-gray-600">Created by {post.username}</p>
-                    <p className="text-xs text-gray-400">
-                        {new Date(post.createdAt).toLocaleDateString()}
-                    </p>
-                </div>
-            </div>
-
-            <DrumMachine
-                pattern={drumLoopPattern}
-                isPlaying={isPlaying}
-                onPlayToggle={setIsPlaying}
-            />
-        </div>
-    );
+    // Pass `onLike` to `PostComponent`
+    return <PostComponent post={convertedPost} onLike={handleLike} />;
 };
 
 // Main Feed Component
@@ -189,7 +100,7 @@ const Feed = () => {
             </h1>
             <div className="space-y-8">
                 {posts.map((post) => (
-                    <Post key={post.id} post={post} />
+                    <FeedPost key={post.id} post={post} />
                 ))}
                 {posts.length === 0 && (
                     <p className="text-center text-gray-500">
