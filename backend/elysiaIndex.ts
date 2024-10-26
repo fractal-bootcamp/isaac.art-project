@@ -85,7 +85,7 @@ app.get(
         orderBy: {
           createdAt: "desc",
         },
-        take: 1,
+        take: 10,
         include: {
           tracks: true,
           likes: true, // Include likes
