@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Post as PostComponent, Post as PostInterface } from './Builder';
+import { useUser } from "@clerk/clerk-react";
 import Clap from "../samples/Clap.wav";
 import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop, Track } from '../DrumLoopLogic';
 
-// Only define types that are specific to the API/DB structure
 interface DBResponse {
     status: number;
     body: {
@@ -17,48 +17,74 @@ interface DBResponse {
         tracks: { instrument: string; pattern: boolean[]; muted: boolean; }[];
         createdAt: string;
         likes?: number;
+        isLikedByUser?: boolean;
     }[];
 }
 
-// Feed Post wrapper to convert DB format to DrumLoop format
 const FeedPost = ({ post }: { post: DBResponse['body'][0] }) => {
+    const { user } = useUser();
+    const [likes, setLikes] = useState(post.likes ?? 0);
+    const [isLiked, setIsLiked] = useState(post.isLikedByUser ?? false);  // Initialize with server value
 
-    // Convert DB format to DrumLoop format
-    const convertTodrumLoop = (dbPost: DBResponse['body'][0]): DrumLoop => {
-        const samples = {
-            "Kick": Kick,
-            "Snare": Snare,
-            "Clap": Clap,
-            "Hat": Hat
-        } as const;
-
-        return {
-            bpm: dbPost.bpm,
-            tracks: dbPost.tracks.map((track): Track => ({
+    const drumLoop: DrumLoop = {
+        bpm: post.bpm,
+        tracks: post.tracks.map((track): Track => {
+            const samples: { [key: string]: string } = {
+                "Kick": Kick,
+                "Snare": Snare,
+                "Clap": Clap,
+                "Hat": Hat
+            };
+            return {
                 name: track.instrument,
-                audioId: samples[track.instrument as keyof typeof samples],
+                audioId: samples[track.instrument] || '',
                 pattern: track.pattern,
                 muted: track.muted
-            })),
-            isPlaying: false,
-            currentPlayIndex: 0
-        };
+            };
+        }),
+        isPlaying: false,
+        currentPlayIndex: 0
+    };
+
+    const handleLike = async () => {
+        if (!user) return;
+
+        try {
+            const response = await fetch('http://localhost:3000/api/toggle-like', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    drumLoopId: post.id,
+                    userId: user.id
+                }),
+            });
+
+            const data = await response.json();
+            if (data.status === 200) {
+                setLikes(data.body.likeCount);
+                setIsLiked(data.body.liked);
+            }
+        } catch (error) {
+            console.error('Error toggling like:', error);
+        }
     };
 
     const convertedPost: PostInterface = {
         id: post.id,
         title: post.title,
-        pattern: convertTodrumLoop(post),
+        pattern: drumLoop,
         username: post.username,
-        likes: post.likes ?? 0
+        likes: likes,
+        isLiked: isLiked
     };
 
-    return <PostComponent post={convertedPost} onLike={() => { }} />;
-
+    return <PostComponent post={convertedPost} onLike={handleLike} />;
 };
 
-// Main Feed Component
 const Feed = () => {
+    const { user } = useUser();
     const [posts, setPosts] = useState<DBResponse['body']>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -66,7 +92,8 @@ const Feed = () => {
     useEffect(() => {
         const fetchPosts = async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/latest-loops');
+                // Include userId in the request to get like status
+                const response = await fetch(`http://localhost:3000/api/latest-loops${user ? `?userId=${user.id}` : ''}`);
                 const data: DBResponse = await response.json();
 
                 if (data.status === 200) {
@@ -82,7 +109,7 @@ const Feed = () => {
         };
 
         fetchPosts();
-    }, []);
+    }, [user]); // Re-fetch when user changes
 
     if (isLoading) {
         return (

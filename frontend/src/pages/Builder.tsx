@@ -12,6 +12,7 @@ export interface Post {
     pattern: DrumLoop;
     username: string;
     likes: number;
+    isLiked?: boolean;  // Add this to the interface
 }
 
 // Utility function for note colors
@@ -270,7 +271,7 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
 };
 
 // Post Component
-export const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => void }) => {
+export const Post = ({ post, onLike }: { post: Post; onLike: () => void }) => {
     const [isPlaying, setIsPlaying] = useState(false);
 
     return (
@@ -281,13 +282,15 @@ export const Post = ({ post, onLike }: { post: Post; onLike: (id: string) => voi
                     <p className="text-sm text-gray-600">Created by {post.username}</p>
                 </div>
                 <button
-                    onClick={() => onLike(post.id)}
-                    className="px-4 py-2 rounded bg-red-100 text-red-500"
+                    onClick={onLike}
+                    className={`px-4 py-2 rounded ${post.isLiked
+                        ? 'bg-red-500 text-white'
+                        : 'bg-red-100 text-red-500'
+                        } hover:bg-red-400 hover:text-white`}
                 >
-                    ❤️ {post.likes}
+                    ❤️
                 </button>
             </div>
-
             <DrumMachine
                 pattern={post.pattern}
                 readonly={true}

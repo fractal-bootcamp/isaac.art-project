@@ -76,25 +76,88 @@ app.post(
   }
 );
 
-// GET endpoint to retrieve recent drum loops
-app.get("/api/latest-loops", async () => {
+// Modify the GET /api/latest-loops endpoint to include like information
+app.get(
+  "/api/latest-loops",
+  async ({ query }: { query: { userId?: string } }) => {
+    try {
+      const recentDrumLoops = await prisma.drumLoop.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 10,
+        include: {
+          tracks: true,
+          likes: true, // Include likes
+        },
+      });
+
+      // Transform the response to include like count and user's like status
+      const transformedLoops = recentDrumLoops.map((loop) => ({
+        ...loop,
+        likeCount: loop.likes.length,
+        isLikedByUser: query.userId
+          ? loop.likes.some((like) => like.userId === query.userId)
+          : false,
+        likes: undefined, // Remove the likes array from response
+      }));
+
+      return {
+        status: 200,
+        body: transformedLoops,
+      };
+    } catch (error) {
+      console.error("Error retrieving recent drum loops:", error);
+      return {
+        status: 500,
+        body: { error: "Internal server error" },
+      };
+    }
+  }
+);
+
+interface ToggleLikeBody {
+  drumLoopId: string;
+  userId: string;
+}
+
+// Clean and simple toggle-like endpoint
+app.post("/api/toggle-like", async ({ body }: { body: ToggleLikeBody }) => {
   try {
-    const recentDrumLoops = await prisma.drumLoop.findMany({
-      orderBy: {
-        createdAt: "desc", // Order by creation date, descending
+    const { drumLoopId, userId } = body;
+
+    // Check if like already exists
+    const existingLike = await prisma.like.findFirst({
+      where: {
+        drumLoopId,
+        userId,
       },
-      take: 10, // Adjust the number of recent loops to retrieve
-      include: {
-        tracks: true, // Include tracks in the response
-      },
+    });
+
+    // Toggle the like status
+    if (existingLike) {
+      await prisma.like.delete({
+        where: { id: existingLike.id },
+      });
+    } else {
+      await prisma.like.create({
+        data: { drumLoopId, userId },
+      });
+    }
+
+    // Get updated like count
+    const likeCount = await prisma.like.count({
+      where: { drumLoopId },
     });
 
     return {
       status: 200,
-      body: recentDrumLoops,
+      body: {
+        liked: !existingLike,
+        likeCount,
+      },
     };
   } catch (error) {
-    console.error("Error retrieving recent drum loops:", error);
     return {
       status: 500,
       body: { error: "Internal server error" },
