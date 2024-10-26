@@ -4,31 +4,39 @@ import Clap from "../samples/Clap.wav";
 import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
-import { DrumLoop } from '../DrumLoopLogic';
+import { DrumLoop, Track } from '../DrumLoopLogic';
+
+// Only define types that are specific to the API/DB structure
+interface DBResponse {
+    status: number;
+    body: {
+        id: string;
+        title: string;
+        username: string;
+        bpm: number;
+        tracks: { instrument: string; pattern: boolean[]; muted: boolean; }[];
+        createdAt: string;
+        likes?: number;
+    }[];
+}
 
 // Feed Post wrapper to convert DB format to DrumLoop format
-const FeedPost = ({ post }: { post: any }) => {
-
-    // Function to handle likes
-    const handleLike = (id: string) => {
-        console.log(`Liked post with ID: ${id}`);
-        // Logic to update likes could go here
-    };
+const FeedPost = ({ post }: { post: DBResponse['body'][0] }) => {
 
     // Convert DB format to DrumLoop format
-    const convertTodrumLoop = (dbPost: any): DrumLoop => {
-        const audioMap: { [key: string]: string } = {
+    const convertTodrumLoop = (dbPost: DBResponse['body'][0]): DrumLoop => {
+        const samples = {
             "Kick": Kick,
             "Snare": Snare,
             "Clap": Clap,
             "Hat": Hat
-        };
+        } as const;
 
         return {
             bpm: dbPost.bpm,
-            tracks: dbPost.tracks.map((track: any) => ({
+            tracks: dbPost.tracks.map((track): Track => ({
                 name: track.instrument,
-                audioId: audioMap[track.instrument],
+                audioId: samples[track.instrument as keyof typeof samples],
                 pattern: track.pattern,
                 muted: track.muted
             })),
@@ -37,22 +45,21 @@ const FeedPost = ({ post }: { post: any }) => {
         };
     };
 
-    // Convert DB post to Post interface format
     const convertedPost: PostInterface = {
         id: post.id,
         title: post.title,
         pattern: convertTodrumLoop(post),
         username: post.username,
-        likes: post.likes || 0
+        likes: post.likes ?? 0
     };
 
-    // Pass `onLike` to `PostComponent`
-    return <PostComponent post={convertedPost} onLike={handleLike} />;
+    return <PostComponent post={convertedPost} onLike={() => { }} />;
+
 };
 
 // Main Feed Component
 const Feed = () => {
-    const [posts, setPosts] = useState<any[]>([]);
+    const [posts, setPosts] = useState<DBResponse['body']>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +67,7 @@ const Feed = () => {
         const fetchPosts = async () => {
             try {
                 const response = await fetch('http://localhost:3000/api/latest-loops');
-                const data = await response.json();
+                const data: DBResponse = await response.json();
 
                 if (data.status === 200) {
                     setPosts(data.body);
