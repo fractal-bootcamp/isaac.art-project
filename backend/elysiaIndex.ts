@@ -16,6 +16,13 @@ app.use(
   })
 );
 
+app.get("/", () => {
+  return {
+    status: 200,
+    body: "Hello World!",
+  };
+});
+
 // POST endpoint for saving drum loop data
 app.post(
   "/api/save-drum-loop",
