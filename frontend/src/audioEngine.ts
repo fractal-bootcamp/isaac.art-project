@@ -10,7 +10,7 @@ class AudioEngine {
   private bpm: number;
   private noteIndex: number = 0;
   private nextNoteTime: number = 0;
-  private schedulerTimerId: NodeJS.Timeout | null = null;
+  private schedulerTimerId: number | null = null;
   private readonly scheduleAheadTime: number = 100; // ms
 
   constructor(drumLoop: DrumLoop) {
@@ -81,8 +81,8 @@ class AudioEngine {
 
   public stop() {
     this.isPlaying = false;
-    if (this.schedulerTimerId) {
-      clearTimeout(this.schedulerTimerId);
+    if (this.schedulerTimerId !== null) {
+      window.clearTimeout(this.schedulerTimerId);
       this.schedulerTimerId = null;
     }
   }
@@ -91,7 +91,6 @@ class AudioEngine {
     if (!this.isPlaying) return;
 
     const currentTime = performance.now();
-
     while (this.nextNoteTime < currentTime + this.scheduleAheadTime) {
       this.scheduleNotes(this.noteIndex, this.nextNoteTime);
       const sixteenthNoteDuration = (60 / this.bpm / 4) * 1000; // in ms
@@ -99,7 +98,7 @@ class AudioEngine {
       this.noteIndex++;
     }
 
-    this.schedulerTimerId = setTimeout(this.scheduler, 25) as NodeJS.Timeout;
+    this.schedulerTimerId = window.setTimeout(this.scheduler, 25);
   };
 
   private scheduleNotes(noteIndex: number, _time: number) {
