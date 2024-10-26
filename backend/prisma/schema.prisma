@@ -24,6 +24,17 @@ model DrumLoop {
   updatedAt DateTime @updatedAt // Automatically update the time when the loop is modified
   username  String // Username who created the drum loop
   title     String   @default("Default title") // Name of the beat, todo delete that
+  likes     Like[] // The relation
+}
+
+model Like {
+  id         String   @id @default(cuid())
+  userId     String // Clerk user ID
+  drumLoopId String
+  drumLoop   DrumLoop @relation(fields: [drumLoopId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, drumLoopId]) // Ensure one like per user per drum loop
 }
 
 model Track {
