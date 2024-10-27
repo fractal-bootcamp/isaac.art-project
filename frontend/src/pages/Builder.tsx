@@ -5,6 +5,7 @@ import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop } from '../DrumLoopLogic';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 export interface Post {
     id: string;
@@ -177,7 +178,6 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
         currentPlayIndex: 0
     });
 
-    // Modified handleShare function to include username and title
     const handleShare = () => {
         const drumLoopData = {
             title: title,
@@ -190,7 +190,7 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
             })),
         };
 
-        fetch('http://localhost:3000/api/save-drum-loop', {
+        fetch(`${SERVER_URL}/api/save-drum-loop`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -219,7 +219,6 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
             setUsername('');
             setIsPlaying(false);
 
-            // Reset pattern to default
             setPattern({
                 bpm: 128,
                 tracks: [
@@ -232,7 +231,6 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
                 currentPlayIndex: 0
             });
 
-            // Call handleShare to send data to backend
             handleShare();
         }
     };
@@ -271,7 +269,7 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
 };
 
 // Post Component
-export const Post = ({ post, onLike }: { post: Post; onLike: () => void }) => {
+export const Post = ({ post, onLike }: { post: Post; onLike: (postId: string) => void }) => {
     const [isPlaying, setIsPlaying] = useState(false);
 
     return (
@@ -282,7 +280,7 @@ export const Post = ({ post, onLike }: { post: Post; onLike: () => void }) => {
                     <p className="text-sm text-gray-600">Created by {post.username}</p>
                 </div>
                 <button
-                    onClick={onLike}
+                    onClick={() => onLike(post.id)}  // Pass post.id to onLike
                     className={`px-4 py-2 rounded ${post.isLiked
                         ? 'bg-red-500 text-white'
                         : 'bg-red-100 text-red-500'
@@ -319,9 +317,7 @@ const Builder = () => {
 
     return (
         <div className="max-w-4xl mx-auto p-4">
-            <h1 className="text-2xl font-bold text-center mb-8">Drum Pattern Builder
-
-            </h1>
+            <h1 className="text-2xl font-bold text-center mb-8">Drum Pattern Builder</h1>
             <div className="space-y-8">
                 <CreatePost addPost={addPost} />
                 <div className="mt-8">

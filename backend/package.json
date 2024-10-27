@@ -6,7 +6,7 @@
     "@types/bun": "latest",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "prisma": "^5.21.1"
+    "prisma": "5.21.1"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -14,7 +14,7 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.12.0",
     "@elysiajs/cors": "^1.1.1",
-    "@prisma/client": "^5.21.1",
+    "@prisma/client": "5.21.1",
     "cors": "^2.8.5",
     "elysia": "^1.1.23",
     "express": "^4.21.1"

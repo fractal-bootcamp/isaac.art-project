@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// This one is just the default
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
@@ -17,31 +16,31 @@ model User {
 }
 
 model DrumLoop {
-  id        String   @id @default(cuid()) // Unique identifier for the drum loop
-  bpm       Int      @default(120) // BPM with a default value of 120
-  tracks    Track[] // Array of tracks associated with this drum loop
-  createdAt DateTime @default(now()) // Store when the drum loop was created
-  updatedAt DateTime @updatedAt // Automatically update the time when the loop is modified
-  username  String // Username who created the drum loop
-  title     String   @default("Default title") // Name of the beat, todo delete that
-  likes     Like[] // The relation
+  id        String   @id @default(cuid())
+  bpm       Int      @default(120)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  username  String
+  title     String   @default("Default title")
+  likes     Like[]
+  tracks    Track[]
 }
 
 model Like {
   id         String   @id @default(cuid())
-  userId     String // Clerk user ID
+  userId     String
   drumLoopId String
-  drumLoop   DrumLoop @relation(fields: [drumLoopId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
+  drumLoop   DrumLoop @relation(fields: [drumLoopId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, drumLoopId]) // Ensure one like per user per drum loop
+  @@unique([userId, drumLoopId])
 }
 
 model Track {
-  id         String    @id @default(cuid()) // Unique identifier for each track
-  instrument String // The instrument name or type (e.g., kick, snare, hi-hat)
-  pattern    Boolean[] // Not ideal... Really an array of booleans, either on or off // DOUBLE CHECK 
+  id         String    @id @default(cuid())
+  instrument String
+  drumLoopId String
+  pattern    Boolean[]
   muted      Boolean
-  drumLoopId String // Foreign key to the DrumLoop
   drumLoop   DrumLoop  @relation(fields: [drumLoopId], references: [id], onDelete: Cascade)
 }
