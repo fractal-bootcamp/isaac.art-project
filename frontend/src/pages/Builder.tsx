@@ -5,6 +5,7 @@ import Hat from "../samples/Hat.wav";
 import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop } from '../DrumLoopLogic';
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
 export interface Post {
     id: string;
@@ -189,7 +190,7 @@ const CreatePost = ({ addPost }: { addPost: (post: Post) => void }) => {
             })),
         };
 
-        fetch('http://localhost:3000/api/save-drum-loop', {
+        fetch(`${SERVER_URL}/api/save-drum-loop`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

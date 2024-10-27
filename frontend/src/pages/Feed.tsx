@@ -7,6 +7,8 @@ import Kick from "../samples/Kick.wav";
 import Snare from "../samples/Snare.wav";
 import { DrumLoop, Track } from '../DrumLoopLogic';
 
+const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+
 interface DBResponse {
     status: number;
     body: {
@@ -50,7 +52,7 @@ const FeedPost = ({ post }: { post: DBResponse['body'][0] }) => {
         if (!user) return;
 
         try {
-            const response = await fetch('http://localhost:3000/api/toggle-like', {
+            const response = await fetch(`${SERVER_URL}/api/toggle-like`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -92,8 +94,9 @@ const Feed = () => {
     useEffect(() => {
         const fetchPosts = async () => {
             try {
-                // Include userId in the request to get like status
-                const response = await fetch(`http://localhost:3000/api/latest-loops${user ? `?userId=${user.id}` : ''}`);
+                const response = await fetch(
+                    `${SERVER_URL}/api/latest-loops${user ? `?userId=${user.id}` : ''}`
+                );
                 const data: DBResponse = await response.json();
 
                 if (data.status === 200) {
@@ -103,6 +106,9 @@ const Feed = () => {
                 }
             } catch (err) {
                 setError('Error connecting to server');
+
+                console.log("SERVER_URL:", SERVER_URL);
+
             } finally {
                 setIsLoading(false);
             }
